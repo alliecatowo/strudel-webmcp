@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Strudel WebMCP</title>
+    <meta name="description" content="A live Strudel REPL with WebMCP. Live-code together." />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header id="app-header">
+      <div class="brand">
+        <strong>Strudel WebMCP</strong>
+        <span class="subtitle">A live Strudel REPL with WebMCP</span>
+      </div>
+      <div class="controls">
+        <button id="btn-play" type="button" title="Play / Stop (Ctrl+Enter / Ctrl+.)">▶ Play</button>
+        <button id="btn-update" type="button" title="Update (Ctrl+Enter)">↻ Update</button>
+        <span id="webmcp-status" class="status" data-state="pending">WebMCP …</span>
+      </div>
+    </header>
+    <main id="app-main">
+      <div id="repl-mount"></div>
+      <div id="eval-error" class="eval-error" hidden></div>
+    </main>
+    <footer id="app-footer">
+      Built on <a href="https://strudel.cc" rel="noopener">Strudel</a> (AGPL-3.0) ·
+      <a href="https://github.com/alliecatowo/strudel-webmcp" rel="noopener">source</a>
+    </footer>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>
