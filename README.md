@@ -6,15 +6,16 @@ Strudel WebMCP progressively enhances the normal Strudel browser REPL with
 semantic tools for the browser agent already accompanying the user.
 
 The human can type, select code, move inline sliders, and perform normally.
-The agent can read and edit that exact same CodeMirror document and evaluate
-changes in the same live Strudel scheduler.
+The agent can read and edit that exact same CodeMirror document, evaluate
+changes in the same live Strudel scheduler, and record what it all sounds
+like — under a permission dial the human owns.
 
 No AI SDK.
 No MCP server.
 No WebSocket bridge.
 No session ID.
 
-![Strudel WebMCP playing the seed groove, with inline sliders live in the editor](./docs/screenshot.png)
+![Strudel WebMCP playing the seed groove: inline sliders live in the editor, a take in the shelf, a saved version](./docs/screenshot.png)
 
 ## Why WebMCP
 
@@ -34,22 +35,43 @@ this integration requires to work: opening the page, nothing else.
 
 ## What the agent can do
 
-Eight WebMCP tools, all operating on the visible editor the human sees:
+Thirteen WebMCP tools, all operating on the visible editor the human sees:
 
-- `strudel_get_context` — read live playback state, cursor, and current human selection.
-- `strudel_get_code` — read the exact current (possibly unsaved) source, optionally by line range.
-- `strudel_apply_edits` — atomically replace one or more ranges of the visible source.
-- `strudel_replace_code` — replace the entire visible source.
-- `strudel_evaluate` — run Strudel's native Update on the visible source, live.
-- `strudel_play` — start playback via the native play path.
-- `strudel_stop` — stop playback via the native stop/hush path.
-- `strudel_focus_range` — select and scroll to a range so the human sees what the agent means.
+- `strudel_get_context` — read live playback state, cursor, current human
+  selection, what is sounding right now, the agent mode, and any pending
+  proposal, solo or recording.
+- `strudel_get_code` — read the exact current (possibly unsaved) source,
+  optionally by line range.
+- `strudel_apply_edits` — atomically replace one or more ranges of the
+  visible source; in review mode this becomes a proposal with a diff the
+  human auditions and accepts.
+- `strudel_replace_code` — replace the entire visible source (same
+  mode/proposal behaviour).
+- `strudel_evaluate` — run Strudel's native Update on the visible source,
+  live; or solo just a range; or audition a pending proposal.
+- `strudel_play` / `strudel_stop` — start/stop playback via the native
+  paths.
+- `strudel_focus_range` — select and scroll to a range so the human sees
+  what the agent means.
+- `strudel_record` — record the live output (master, or one
+  `.analyze("id")` voice) and get dBFS/band analysis plus a playable take
+  in the page.
+- `strudel_list_sounds` / `strudel_load_samples` — see and extend the sound
+  registry the session's `s("...")` actually resolves against.
+- `strudel_snapshot` — save the current source as a named version
+  (restore/export/open at strudel.cc).
+- `strudel_set_theme` — switch the editor colour theme.
+
+Everything mutating is stale-write guarded by a `codeHash`, and the human's
+permission dial decides how much the agent may do: **read** (look, record,
+point — nothing else), **review** (edits become proposals), or **live**
+(edits apply directly).
 
 Full input/output/error details: [docs/webmcp-tools.md](./docs/webmcp-tools.md).
 
 ## Try it
 
-Live site: **https://alliecatowo.github.io/strudel-webmcp/**
+Live site: **https://strudel-webmcp.vercel.app**
 
 This requires a WebMCP-capable browser or agent (for example Chrome 149+ or
 Edge 150+ with the WebMCP origin trial, or ChatGPT Desktop) to exercise the
@@ -110,7 +132,9 @@ breakdown.
 - `npm test` — unit tests (Vitest): hashing, position/offset conversion, edit
   validation, stale-hash rejection, source-size bounds, error normalization.
 - `npm run test:e2e` — Playwright end-to-end tests against the real
-  `<strudel-editor>`, including the inline-slider stale-write test.
+  `<strudel-editor>`, including the inline-slider stale-write test and the
+  agent-modes suite (read denials, the proposal lifecycle, solo, both
+  recording modes, samples, snapshots, themes).
 
 ## Repository layout
 
@@ -120,7 +144,7 @@ src/
   demo-pattern.ts     # seed composition
   strudel/            # the adapter seam — the only code that touches @strudel/repl internals
   webmcp/             # tool definitions, schemas, registration, error/result helpers
-  ui/                 # small WebMCP status strip
+  ui/                 # human-side chrome: status strip, mode dial, proposals, takes, shelf
 docs/
   BUILD_CONTRACT.md   # authoritative implementation spec
   DECISIONS.md         # recorded deviations from the contract, if any

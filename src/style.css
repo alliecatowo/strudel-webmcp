@@ -7,6 +7,8 @@
   --ok: #4ade80;
   --warn: #fbbf24;
   --err: #f87171;
+  --rec: #fb7185;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; margin: 0; }
@@ -17,6 +19,13 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* Strudel visualizers (.pianoroll(), .scope(), …) draw on a fixed full-page canvas.
+   Keep it behind the chrome and let the editor stay transparent over it, like strudel.cc. */
+body > canvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+#app-header, #app-footer { position: relative; z-index: 2; background: var(--bg); }
+#app-main { position: relative; z-index: 1; }
+
 #app-header {
   display: flex;
   align-items: center;
@@ -28,6 +37,7 @@ body {
 .brand { display: flex; align-items: baseline; gap: 10px; }
 .subtitle { color: var(--muted); font-size: 12px; }
 .controls { display: flex; align-items: center; gap: 8px; }
+
 button {
   background: #1c1c22;
   color: var(--fg);
@@ -36,32 +46,67 @@ button {
   padding: 5px 12px;
   font: inherit;
   cursor: pointer;
+  min-width: 84px;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 160ms var(--ease), color 160ms var(--ease), background 160ms var(--ease),
+    transform 120ms var(--ease), box-shadow 200ms var(--ease);
 }
-button:hover { border-color: var(--accent); }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:active:not(:disabled) { transform: scale(0.97); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:disabled { opacity: 0.45; cursor: default; }
 button[data-playing="true"] { border-color: var(--ok); color: var(--ok); }
+/* The visible code differs from what is sounding: nudge the human (and agent) toward Update. */
+button#btn-update[data-dirty="true"] {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.5);
+  animation: dirty-pulse 1.8s var(--ease) infinite;
+}
+button#btn-rec[data-recording="true"] {
+  border-color: var(--rec);
+  color: var(--rec);
+  animation: rec-blink 1s ease-in-out infinite;
+}
+
 .status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 12px;
   color: var(--muted);
-  padding: 3px 8px;
+  padding: 3px 10px;
   border: 1px solid #2a2a30;
   border-radius: 999px;
   white-space: nowrap;
+  transition: color 200ms var(--ease), border-color 200ms var(--ease);
 }
 .status[data-state="ready"] { color: var(--ok); border-color: #1f4d2f; }
 .status[data-state="unavailable"] { color: var(--muted); }
 .status[data-state="error"] { color: var(--err); border-color: #5a2222; }
+.status-activity {
+  max-width: 0;
+  opacity: 0;
+  overflow: hidden;
+  color: var(--fg);
+  transition: max-width 260ms var(--ease), opacity 200ms var(--ease);
+}
+.status-activity.visible { max-width: 260px; opacity: 1; }
+.status-activity[data-ok="false"] { color: var(--err); }
+.status-activity.pulse { animation: activity-pop 320ms var(--ease); }
+
 #app-main { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 #repl-mount { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 /* The <strudel-editor> element inserts its editor root as the following sibling div. */
-#repl-mount > div { flex: 1; min-height: 0; overflow: auto; padding: 8px 4px; }
-#repl-mount .cm-editor { height: 100%; }
-#app-footer {
-  padding: 6px 14px;
-  font-size: 12px;
-  color: var(--muted);
-  border-top: 1px solid #222;
+#repl-mount > div {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px 4px;
+  background: transparent !important;
 }
-#app-footer a { color: var(--accent); text-decoration: none; }
+#repl-mount .cm-editor { height: 100%; }
+
 .eval-error {
   margin: 0 12px 8px;
   padding: 6px 10px;
@@ -71,4 +116,58 @@ button[data-playing="true"] { border-color: var(--ok); color: var(--ok); }
   font-family: ui-monospace, monospace;
   font-size: 12px;
   white-space: pre-wrap;
+  animation: rise-in 220ms var(--ease);
+}
+
+.recordings {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 8px 12px 10px;
+  border-top: 1px solid #222;
+  background: rgba(14, 14, 16, 0.85);
+  backdrop-filter: blur(6px);
+}
+.clip {
+  flex: 0 0 300px;
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #2a2a30;
+  border-radius: 8px;
+  background: #141418;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 260ms var(--ease), transform 260ms var(--ease), border-color 160ms var(--ease);
+}
+.clip.clip-in { opacity: 1; transform: none; }
+.clip:hover { border-color: #3a3a44; }
+.clip-head { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.clip-label { color: var(--fg); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clip-meta { color: var(--muted); font-variant-numeric: tabular-nums; }
+.clip-download { margin-left: auto; color: var(--accent); text-decoration: none; }
+.clip-download:hover { text-decoration: underline; }
+.clip-wave { width: 100%; height: 36px; display: block; border-radius: 4px; background: #0e0e10; }
+.clip audio { width: 100%; height: 32px; }
+
+#app-footer {
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px solid #222;
+}
+#app-footer a { color: var(--accent); text-decoration: none; }
+
+@keyframes dirty-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0.45); }
+  70% { box-shadow: 0 0 0 7px rgba(125, 211, 252, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(125, 211, 252, 0); }
+}
+@keyframes rec-blink { 50% { opacity: 0.55; } }
+@keyframes activity-pop { 0% { transform: scale(0.9); } 60% { transform: scale(1.04); } 100% { transform: none; } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .clip { opacity: 1; transform: none; }
 }

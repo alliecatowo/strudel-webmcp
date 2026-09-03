@@ -10,7 +10,14 @@ const EXPECTED_TOOL_NAMES = [
   'strudel_play',
   'strudel_stop',
   'strudel_focus_range',
+  'strudel_record',
+  'strudel_list_sounds',
+  'strudel_load_samples',
+  'strudel_snapshot',
+  'strudel_set_theme',
 ];
+
+const READ_ONLY_TOOL_NAMES = ['strudel_get_context', 'strudel_get_code', 'strudel_list_sounds'];
 
 interface ToolDefinition {
   name: string;
@@ -31,17 +38,17 @@ async function definition(page: import('@playwright/test').Page, name: string): 
 }
 
 test.describe('WebMCP tool registration', () => {
-  test('exactly the 8 expected tools are registered once each, in order', async ({ page }) => {
+  test('exactly the 13 expected tools are registered once each, in order', async ({ page }) => {
     await openWithShim(page);
     const regs = await registrations(page);
-    expect(regs).toHaveLength(8);
+    expect(regs).toHaveLength(13);
     expect(regs).toEqual(EXPECTED_TOOL_NAMES);
-    expect(new Set(regs).size).toBe(8);
+    expect(new Set(regs).size).toBe(13);
   });
 
-  test('strudel_get_context and strudel_get_code are read-only and untrusted-content', async ({ page }) => {
+  test('strudel_get_context, strudel_get_code and strudel_list_sounds are read-only and untrusted-content', async ({ page }) => {
     await openWithShim(page);
-    for (const name of ['strudel_get_context', 'strudel_get_code']) {
+    for (const name of READ_ONLY_TOOL_NAMES) {
       const def = await definition(page, name);
       expect(def?.annotations?.readOnlyHint).toBe(true);
       expect(def?.annotations?.untrustedContentHint).toBe(true);
@@ -62,7 +69,7 @@ test.describe('WebMCP tool registration', () => {
 
   test('mutating tools are not marked read-only', async ({ page }) => {
     await openWithShim(page);
-    const mutating = EXPECTED_TOOL_NAMES.filter((n) => n !== 'strudel_get_context' && n !== 'strudel_get_code');
+    const mutating = EXPECTED_TOOL_NAMES.filter((n) => !READ_ONLY_TOOL_NAMES.includes(n));
     for (const name of mutating) {
       const def = await definition(page, name);
       expect(def?.annotations?.readOnlyHint, `${name} should not be readOnly`).not.toBe(true);

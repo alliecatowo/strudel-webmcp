@@ -99,12 +99,13 @@ interface FakeReplOptions {
 }
 
 class FakeRepl implements ReplLike {
-  scheduler: { started: boolean };
+  scheduler: { started: boolean; now(): number };
   state: ReplLike['state'];
   stopCallCount = 0;
+  evaluateCalls: string[] = [];
 
   constructor(opts: FakeReplOptions = {}) {
-    this.scheduler = { started: opts.started ?? false };
+    this.scheduler = { started: opts.started ?? false, now: () => 0 };
     this.state = {
       code: '',
       activeCode: opts.activeCode ?? '',
@@ -120,6 +121,12 @@ class FakeRepl implements ReplLike {
     this.stopCallCount++;
     this.scheduler.started = false;
   }
+
+  async evaluate(code: string): Promise<unknown> {
+    this.evaluateCalls.push(code);
+    this.state.activeCode = code;
+    return undefined;
+  }
 }
 
 class FakeMirror implements StrudelMirrorLike {
@@ -128,6 +135,8 @@ class FakeMirror implements StrudelMirrorLike {
   evaluateCallCount = 0;
   stopCallCount = 0;
   toggleCallCount = 0;
+  flashCallCount = 0;
+  themes: string[] = [];
   onEvaluate?: () => void;
 
   constructor(editor: FakeEditorView, repl: FakeRepl) {
@@ -151,6 +160,18 @@ class FakeMirror implements StrudelMirrorLike {
 
   async toggle(): Promise<void> {
     this.toggleCallCount++;
+  }
+
+  flash(): void {
+    this.flashCallCount++;
+  }
+
+  setTheme(name: string): void {
+    this.themes = [name];
+  }
+
+  updateSettings(settings: Record<string, unknown>): void {
+    if (typeof settings.theme === 'string') this.themes = [settings.theme];
   }
 }
 
@@ -244,64 +265,50 @@ describe('createStrudelAdapter', () => {
   });
 
   describe('applyEdits', () => {
-    it('throws STALE_CODE on a wrong hash, does not dispatch, and leaves the doc unchanged', () => {
+    it('rejects with STALE_CODE on a wrong hash, does not dispatch, and leaves the doc unchanged', async () => {
       const { host, editor } = makeHost('abcdef');
       const adapter = createStrudelAdapter(host);
       const edits = [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } }, text: 'X' }];
-      expect(() => adapter.applyEdits(edits, 'wrong-hash')).toThrow(StrudelError);
-      try {
-        adapter.applyEdits(edits, 'wrong-hash');
-      } catch (err) {
-        expect((err as StrudelError).code).toBe('STALE_CODE');
-      }
+      await expect(adapter.applyEdits(edits, 'wrong-hash')).rejects.toThrow(StrudelError);
+      await expect(adapter.applyEdits(edits, 'wrong-hash')).rejects.toMatchObject({ code: 'STALE_CODE' });
       expect(editor.dispatchCalls.length).toBe(0);
       expect(editor.text).toBe('abcdef');
     });
 
-    it('dispatches once with an array of changes on a correct hash and returns the new codeHash', () => {
+    it('dispatches once with an array of changes on a correct hash and returns the new codeHash', async () => {
       const { host, editor } = makeHost('abcdef');
       const adapter = createStrudelAdapter(host);
       const expected = hashCode('abcdef');
       const edits = [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } }, text: 'X' }];
-      const result = adapter.applyEdits(edits, expected);
+      const result = await adapter.applyEdits(edits, expected);
       expect(editor.dispatchCalls.length).toBe(1);
       expect(Array.isArray(editor.dispatchCalls[0]?.changes)).toBe(true);
       expect(editor.text).toBe('Xbcdef');
-      expect(result.codeHash).toBe(hashCode('Xbcdef'));
+      expect(result).toMatchObject({ updated: true, codeHash: hashCode('Xbcdef'), changes: 1 });
     });
 
-    it('rejects a missing expectedCodeHash with INVALID_INPUT', () => {
+    it('rejects a missing expectedCodeHash with INVALID_INPUT', async () => {
       const { host } = makeHost('abcdef');
       const adapter = createStrudelAdapter(host);
       const edits = [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } }, text: 'X' }];
-      try {
-        // @ts-expect-error testing runtime guard against a missing hash
-        adapter.applyEdits(edits, undefined);
-        expect.fail('should have thrown');
-      } catch (err) {
-        expect((err as StrudelError).code).toBe('INVALID_INPUT');
-      }
+      // @ts-expect-error testing runtime guard against a missing hash
+      await expect(adapter.applyEdits(edits, undefined)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
     });
   });
 
   describe('replaceCode', () => {
-    it('throws STALE_CODE on a wrong hash', () => {
+    it('rejects with STALE_CODE on a wrong hash', async () => {
       const { host } = makeHost('abcdef');
       const adapter = createStrudelAdapter(host);
-      try {
-        adapter.replaceCode('new code', 'wrong-hash');
-        expect.fail('should have thrown');
-      } catch (err) {
-        expect((err as StrudelError).code).toBe('STALE_CODE');
-      }
+      await expect(adapter.replaceCode('new code', 'wrong-hash')).rejects.toMatchObject({ code: 'STALE_CODE' });
     });
 
-    it('replaces the whole document on a correct hash', () => {
+    it('replaces the whole document on a correct hash', async () => {
       const { host, editor } = makeHost('abcdef');
       const adapter = createStrudelAdapter(host);
-      const result = adapter.replaceCode('new code', hashCode('abcdef'));
+      const result = await adapter.replaceCode('new code', hashCode('abcdef'));
       expect(editor.text).toBe('new code');
-      expect(result.codeHash).toBe(hashCode('new code'));
+      expect(result).toMatchObject({ updated: true, codeHash: hashCode('new code'), changes: 1 });
     });
   });
 
@@ -334,7 +341,7 @@ describe('createStrudelAdapter', () => {
       const adapter = createStrudelAdapter(host);
       const controller = new AbortController();
       controller.abort();
-      await expect(adapter.evaluate(hashCode('abcdef'), controller.signal)).rejects.toMatchObject({
+      await expect(adapter.evaluate(hashCode('abcdef'), {}, controller.signal)).rejects.toMatchObject({
         code: 'ABORTED',
       });
       expect(mirror.evaluateCallCount).toBe(0);

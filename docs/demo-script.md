@@ -1,14 +1,15 @@
 # Demo script
 
-Target length: 90–120 seconds. Audio is the wow factor — keep narration
-brief and let the music carry it.
+Target length: 2–3 minutes for the full nine scenes; scenes 1–6 alone still
+make the 90–120 second cut if needed. Audio is the wow factor — keep
+narration brief and let the music carry it.
 
 ## Pre-flight checklist
 
 - [ ] Browser with WebMCP available (Chrome 149+ / Edge 150+ origin trial, or
       ChatGPT Desktop) and a compatible browser agent connected.
 - [ ] System audio on, volume checked before recording.
-- [ ] Page loaded fresh at the live URL; `WebMCP ready · 8 tools` visible in
+- [ ] Page loaded fresh at the live URL; `WebMCP ready · 13 tools` visible in
       the header.
 - [ ] Sliders are only visible in the editor **after the first evaluation**
       (Strudel renders slider widgets on `afterEval`) — so Play must be
@@ -112,6 +113,74 @@ Ask:
 
 Agent explains briefly in its own words. The human sees the exact
 highlighted source, not a line-number citation.
+
+## Scene 7 — The human holds the dial (modes and proposals)
+
+Switch the header dial to **Review** (it defaults to Live; Read is the
+lockdown end). Ask the agent for a bigger change:
+
+> "Swap the kick for a different one — but let me check it first."
+
+**Expected tool calls:**
+
+1. `strudel_get_context` / `strudel_get_code` — reads state and source.
+2. `strudel_apply_edits` — in review mode this returns
+   `{proposed: true, …}` with a diff instead of touching the editor.
+
+A proposal bar appears under the header: summary, line span, the diff, and
+Audition / Accept / Discard buttons. The music has not changed and the
+source has not changed.
+
+> "This is the safety property: in review, the agent proposes, I decide."
+
+3. Optionally `strudel_evaluate({proposalId})` — the agent auditions its own
+   proposal; the page shows an "Auditioning proposal" chip while the
+   proposal (not the document) is what is sounding.
+
+Human clicks **Audition** (or relies on the agent's), listens, then
+**Accept** — the edit lands in the editor and the music updates in place —
+or **Discard**. Mention that Read mode denies every mutation outright
+(`MODE_DENIED`) — even the agent's evaluate and stop.
+
+## Scene 8 — The agent gets ears (recording)
+
+While the groove plays, ask:
+
+> "Record four seconds and tell me: is the bass too loud?"
+
+**Expected tool calls:**
+
+1. `strudel_record` (`{durationMs: 4000}`) — the header Rec button shows a
+   live timer while it runs; the call returns peak/RMS in dBFS, a loudness
+   curve, and low/mid/high band levels, plus a playable take with a
+   waveform in the Takes shelf at the bottom of the page.
+
+Agent answers with numbers, not vibes ("bass is ~6 dB above the kick"), and
+the human can hit play on the take themselves. If there's time, show
+`untilStopped: true`: the recording runs until the human presses Stop, and
+either side can stop the other's take. Per-voice isolation
+(`source: "kick"` after adding `.analyze("kick")` to a pattern) is a good
+closer if the take-home message has already landed.
+
+## Scene 9 — New sounds and safety net (samples, versions)
+
+Ask:
+
+> "Load a clap from the strudel catalogue you actually have, snap a version
+> first, and use it."
+
+**Expected tool calls:**
+
+1. `strudel_snapshot` — "before" version appears in the Versions shelf
+   (restore / export / open at strudel.cc).
+2. `strudel_list_sounds` (`{query: "clap"}`) — the real registry, not a
+   hardcoded list.
+3. `strudel_apply_edits` + `strudel_evaluate` — uses one of the listed
+   names.
+
+If time is short, show the human dragging an audio file onto the page and
+it appearing in the Samples shelf next to the agent-loaded ones — same
+registry, same `s("...")`.
 
 ## Final line
 

@@ -33,13 +33,18 @@ export async function evaluateVisible(mirror: StrudelMirrorLike, signal?: AbortS
   });
   await Promise.race([mirror.evaluate(), abortPromise]);
   if (signal?.aborted) throw aborted();
+  const err = readEvalError(mirror);
+  if (err) throw err;
+}
+
+/** Convert the REPL's swallowed evalError (if any) into a bounded structured error. */
+export function readEvalError(mirror: StrudelMirrorLike): StrudelError | undefined {
   const err = mirror.repl.state.evalError;
-  if (err) {
-    const details: Record<string, unknown> = {};
-    if (err.loc && Number.isInteger(err.loc.line)) {
-      details.line = Math.max(0, err.loc.line - 1);
-      details.column = err.loc.column ?? 0;
-    }
-    throw new StrudelError('EVALUATION_ERROR', bounded(err.message || 'Evaluation failed.', LIMITS.maxDiagnostic), details);
+  if (!err) return undefined;
+  const details: Record<string, unknown> = {};
+  if (err.loc && Number.isInteger(err.loc.line)) {
+    details.line = Math.max(0, err.loc.line - 1);
+    details.column = err.loc.column ?? 0;
   }
+  return new StrudelError('EVALUATION_ERROR', bounded(err.message || 'Evaluation failed.', LIMITS.maxDiagnostic), details);
 }

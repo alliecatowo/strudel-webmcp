@@ -47,12 +47,25 @@ export interface StrudelAdapter {
   getCode(): string;
   getCodeSlice(startLine?: number, endLine?: number): CodeSlice;
   getContext(): StrudelContext;
-  applyEdits(edits: SourceEdit[], expectedCodeHash: string): EditResult;
-  replaceCode(code: string, expectedCodeHash: string): EditResult;
-  evaluate(expectedCodeHash: string, signal?: AbortSignal): Promise<EvaluationResult>;
+  applyEdits(edits: SourceEdit[], expectedCodeHash: string, options?: EditOptions): Promise<EditResult | ProposalResult>;
+  replaceCode(code: string, expectedCodeHash: string, options?: EditOptions): Promise<EditResult | ProposalResult>;
+  evaluate(expectedCodeHash: string, options?: EvaluateOptions, signal?: AbortSignal): Promise<EvaluationResult>;
   play(expectedCodeHash: string, signal?: AbortSignal): Promise<PlaybackResult>;
   stop(): Promise<PlaybackResult>;
   focusRange(range: SourceRange, expectedCodeHash?: string): FocusResult;
+  record(options: RecordOptions, signal?: AbortSignal): Promise<RecordResult>;
+  loadSamples(sources: unknown, baseUrl?: string): Promise<LoadSamplesResult>;
+  listSounds(query?: string, limit?: number): { total: number; sounds: { name: string; type: string; tag?: string; variants?: number }[]; truncated: boolean };
+  snapshot(label?: string): SnapshotResult;
+  setTheme(theme: string): ThemeResult;
+
+  // Human-side operations (page UI). Never exposed as tools.
+  acceptProposal(): Promise<EditResult>;
+  discardProposal(): void;
+  auditionProposal(): Promise<EvaluationResult>;
+  returnFromAudition(): Promise<EvaluationResult>;
+  soloRange(range: SourceRange): Promise<EvaluationResult>;
+  restoreSnapshot(id: string): EditResult;
 }
 ```
 
@@ -83,19 +96,44 @@ document, verify `expectedCodeHash` still matches it (see Stale-write rule
 below), convert the given line/column ranges to CM6 offsets, and dispatch one
 CodeMirror transaction (`view.dispatch({ changes })`). This is the same kind
 of transaction a human edit or a slider produces — same undo history, same
-visual update, same document. The agent never evaluates as a side effect of
-editing.
+visual update, same document. Which of the two happens depends on the
+human's mode dial (`Session`, `src/strudel/session.ts`): in live mode the
+transaction is dispatched (and optionally followed by an evaluation when
+`evaluate: true`); in review mode — or with `propose: true` — nothing is
+dispatched and the computed changes are stored as a proposal instead. The
+page renders the proposal bar (summary, line span, diff) and only
+`acceptProposal()` — a human button — ever dispatches it, re-checked against
+the base hash. Read mode rejects the call outright (`MODE_DENIED`). The
+agent never evaluates as a side effect of editing.
 
 **Evaluate.** `strudel_evaluate` re-reads the document, checks the hash, and
 calls `host.editor.evaluate()` — the exact function Strudel's own Update
 action calls. It doesn't run any string the agent passed in; it evaluates
 whatever is currently visible in the editor at call time, which is only ever
-reachable by having first gone through an edit that is itself visible.
+reachable by having first gone through an edit that is itself visible. The
+two `EvaluateOptions` variants evaluate code **derived from** visible
+source, through the REPL's inner `repl.evaluate(code)`: `range` solos a
+slice of the document (space-padded so all original offsets are preserved —
+Strudel's own highlighting still lands on the right characters), and
+`proposalId` auditions a pending proposal's derived document. Both are
+transient and disclosed (Solo/Auditioning chips, `agent.solo` /
+`agent.auditioning` in context); see docs/DECISIONS.md.
 
 **Play / Stop.** `strudel_play` calls the same native evaluate path
 (Strudel's play button is `toggle()`, which evaluates when stopped); it does
 not run a second Strudel runtime. `strudel_stop` calls `host.editor.stop()`,
 the native stop/hush path.
+
+**Record.** A `MasterTap` (`src/strudel/audio-tap.ts`) is installed before
+Strudel builds its audio graph: it wraps `AudioNode.prototype.connect` so
+that every connection to an `AudioDestinationNode` is also mirrored into a
+per-context `GainNode`. The tap never changes Strudel's graph or gain — it
+only listens. `strudel_record` records that tap (or the `AnalyserNode`
+behind a `.analyze("id")` voice) with `MediaRecorder`, decodes the clip, and
+analyzes the PCM (`src/strudel/analysis.ts`): peak/RMS dBFS, a 250 ms
+loudness curve, low/mid/high bands. Finished clips go to the page's Takes
+shelf for the human; the human's own Rec button records the same tap, and
+either side can stop the other's take.
 
 ## Why evaluate is separate from edit
 

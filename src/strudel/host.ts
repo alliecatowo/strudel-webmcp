@@ -54,18 +54,31 @@ export interface ReplState {
   started: boolean;
   isDirty?: boolean;
 }
+export interface HapLike {
+  isActive?(cycle: number): boolean;
+  context?: { locations?: { start: number; end: number }[] };
+}
+export interface DrawerLike {
+  visibleHaps?: HapLike[];
+}
 export interface ReplLike {
-  scheduler: { started: boolean };
+  scheduler: { started: boolean; now(): number };
   state: ReplState;
   stop(): void;
+  /** Native evaluation of a code string (used for solo/audition of visible sub-ranges/proposals). */
+  evaluate(code: string, autostart?: boolean, hush?: boolean): Promise<unknown>;
 }
 export interface StrudelMirrorLike {
   editor: EditorViewLike;
   repl: ReplLike;
+  drawer?: DrawerLike;
   code: string;
   evaluate(): Promise<void>;
   stop(): Promise<void>;
   toggle(): Promise<void>;
+  flash(): void;
+  setTheme(name: string): void;
+  updateSettings(settings: Record<string, unknown>): void;
 }
 export interface StrudelEditorElement extends HTMLElement {
   editor: StrudelMirrorLike | null;

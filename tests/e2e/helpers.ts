@@ -10,7 +10,7 @@ export interface ToolError {
 export async function openWithShim(page: Page): Promise<void> {
   await page.addInitScript(installWebMcpShim);
   await page.goto('/');
-  await expect(page.locator('#webmcp-status')).toHaveText(/WebMCP ready · 8 tools/);
+  await expect(page.locator('#webmcp-status')).toHaveText(/WebMCP ready · 13 tools/);
   await expect(page.locator('.cm-content')).toBeVisible();
 }
 

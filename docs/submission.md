@@ -34,7 +34,7 @@ composition to keep consistent.
 ## Execution
 
 Strudel WebMCP wraps the official Strudel REPL and CodeMirror editor with a
-narrow adapter (`src/strudel/adapter.ts`) and eight WebMCP tools
+narrow adapter (`src/strudel/adapter.ts`) and thirteen WebMCP tools
 (`src/webmcp/tools.ts`) built on top of it. Every tool reads the live source
 fresh; every mutating tool requires the `codeHash` from a previous read and
 is rejected with `STALE_CODE` if the human changed anything since —
@@ -44,9 +44,16 @@ Update path (`host.editor.evaluate()`), so an agent's edit becomes audible
 exactly the way a human's does, without stopping the clock if it's already
 running. Both human selection and agent-directed selection are shared
 through the same `EditorView` selection state (`strudel_get_context`,
-`strudel_focus_range`). The whole thing is a static site — no server, no
-bridge — deployed to GitHub Pages, with unit tests over the hashing/range/
-edit-validation logic and Playwright end-to-end tests against the real
+`strudel_focus_range`). The human owns a read/review/live permission dial:
+in review mode agent edits become proposals with diffs that the human
+auditions, accepts or discards, and read mode denies every mutation. The
+agent also gets ears and a sound registry: `strudel_record` captures the
+live output (per-voice via `.analyze("id")`) with dBFS/band analysis and
+leaves a playable take in the page, and `strudel_list_sounds` /
+`strudel_load_samples` work against the registry the running scheduler
+actually resolves `s("...")` against. The whole thing is a static site — no
+server, no bridge — with unit tests over the hashing/range/edit-validation
+logic and Playwright end-to-end tests against the real
 `<strudel-editor>`, including a dedicated test that moves an actual inline
 slider and confirms a stale agent write against the pre-slider hash is
 rejected.
@@ -84,5 +91,5 @@ no secondary source of truth.
 ## Links
 
 - Repository: https://github.com/alliecatowo/strudel-webmcp
-- Live site: https://alliecatowo.github.io/strudel-webmcp/
+- Live site: https://strudel-webmcp.vercel.app
 - Demo video: _placeholder — add link once recorded per `docs/demo-script.md`_
