@@ -36,6 +36,11 @@ function wireTransport(host: StrudelEditorElement, session: Session, adapter: Re
   const solo = document.getElementById('btn-solo') as HTMLButtonElement | null;
   const rec = document.getElementById('btn-rec') as HTMLButtonElement | null;
   const errorBox = document.getElementById('eval-error');
+  // Last evaluated code seen on the REPL's own update events. When an evaluation lands whose
+  // code is the visible document, the whole document is what is sounding — so any solo/audition
+  // notice is over, whoever triggered the evaluation (human Ctrl+Enter, native toggle, or agent).
+  // Derived evaluations (solo/audition) land a different string and leave the notice alone.
+  let lastActiveCode: string | undefined;
   // Native REPL paths only: toggle() = evaluate when stopped / stop when playing.
   play?.addEventListener('click', () => void host.editor?.toggle());
   update?.addEventListener('click', () => void adapter.returnFromAudition().catch(() => undefined));
@@ -61,8 +66,20 @@ function wireTransport(host: StrudelEditorElement, session: Session, adapter: Re
     }
   });
   host.addEventListener('update', (ev) => {
-    const detail = (ev as CustomEvent<{ started?: boolean; error?: Error; isDirty?: boolean }>).detail;
+    const detail = (ev as CustomEvent<{ started?: boolean; error?: Error; isDirty?: boolean; activeCode?: unknown }>).detail;
     const started = Boolean(detail?.started);
+    const landed = typeof detail?.activeCode === 'string' ? detail.activeCode : undefined;
+    if (landed !== undefined && landed !== lastActiveCode) {
+      lastActiveCode = landed;
+      try {
+        if (landed === adapter.getCode()) {
+          session.setSolo(undefined);
+          session.setAuditioning(false);
+        }
+      } catch {
+        /* editor not ready yet; ignore */
+      }
+    }
     if (play) {
       play.dataset.playing = String(started);
       if (playLabel) playLabel.textContent = started ? 'Stop' : 'Play';
@@ -74,6 +91,9 @@ function wireTransport(host: StrudelEditorElement, session: Session, adapter: Re
       session.setSolo(undefined);
       session.setAuditioning(false);
     }
+    // Either side can end anyone's take: stopping the scheduler gracefully ends a recording
+    // in progress (the captured clip is kept), whether the human or the agent started it.
+    if (!started) session.state.recording?.stop();
     // Human and agent see the same failure: mirror the REPL's own error state, nothing more.
     if (errorBox) {
       const message = detail?.error?.message;

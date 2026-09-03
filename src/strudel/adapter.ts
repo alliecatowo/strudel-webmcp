@@ -113,6 +113,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
   };
 
   const makeProposal = (kind: Proposal['kind'], base: string, changes: OffsetChange[], summary: string | undefined): ProposalResult => {
+    const wasAuditioning = session.state.auditioning;
     const code = applyChanges(base, changes);
     const first = changes[0];
     const last = changes[changes.length - 1];
@@ -131,6 +132,11 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
       createdAt: Date.now(),
     };
     session.setProposal(proposal);
+    if (wasAuditioning && isPlaying(mirror())) {
+      // The old proposal's code is what is sounding, but that proposal is gone.
+      // Return the audio to the visible document so state and sound agree.
+      void evaluateVisible(mirror()).catch(() => undefined);
+    }
     return {
       proposed: true,
       proposalId: proposal.id,

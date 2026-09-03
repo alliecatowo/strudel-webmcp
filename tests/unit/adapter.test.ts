@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CmLine, CmText, CmTransactionSpec, EditorViewLike, ReplLike, StrudelEditorElement, StrudelEvalError, StrudelMirrorLike } from '../../src/strudel/host';
 import { createStrudelAdapter } from '../../src/strudel/adapter';
+import { Session } from '../../src/strudel/session';
 import { hashCode } from '../../src/strudel/revisions';
 import { StrudelError } from '../../src/webmcp/errors';
 import { LIMITS } from '../../src/strudel/types';
@@ -293,6 +294,43 @@ describe('createStrudelAdapter', () => {
       const edits = [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 1 } }, text: 'X' }];
       // @ts-expect-error testing runtime guard against a missing hash
       await expect(adapter.applyEdits(edits, undefined)).rejects.toMatchObject({ code: 'INVALID_INPUT' });
+    });
+  });
+
+  describe('proposal superseding an audition', () => {
+    const insert = [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } }, text: '// ' }];
+
+    it('returns the audio to the visible document when playing', async () => {
+      const { host, mirror, editor } = makeHost('s("bd")', { repl: { started: true, activeCode: 's("bd")' } });
+      const adapter = createStrudelAdapter(host, { session: new Session('review') });
+      const base = hashCode('s("bd")');
+      const first = await adapter.applyEdits(insert, base);
+      expect(first).toMatchObject({ proposed: true });
+      const proposalId = (first as { proposalId: string }).proposalId;
+      const audition = await adapter.evaluate(base, { proposalId });
+      expect(audition.scope).toBe('audition');
+      expect(adapter.session.state.auditioning).toBe(true);
+
+      const second = await adapter.applyEdits(insert, base);
+      expect(second).toMatchObject({ proposed: true });
+      // The old proposal is gone, so its code must stop sounding: the doc is re-evaluated.
+      await vi.waitFor(() => expect(mirror.evaluateCallCount).toBe(1));
+      expect(adapter.session.state.auditioning).toBe(false);
+      expect(editor.text).toBe('s("bd")');
+    });
+
+    it('does not evaluate when nothing is playing', async () => {
+      const { host, mirror } = makeHost('s("bd")', { repl: { started: false, activeCode: '' } });
+      const adapter = createStrudelAdapter(host, { session: new Session('review') });
+      const base = hashCode('s("bd")');
+      const first = await adapter.applyEdits(insert, base);
+      const proposalId = (first as { proposalId: string }).proposalId;
+      await adapter.evaluate(base, { proposalId });
+      expect(adapter.session.state.auditioning).toBe(true);
+      await adapter.applyEdits(insert, base);
+      await new Promise((r) => setTimeout(r, 10));
+      expect(mirror.evaluateCallCount).toBe(0);
+      expect(adapter.session.state.auditioning).toBe(false);
     });
   });
 

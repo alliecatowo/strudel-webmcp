@@ -3,7 +3,9 @@
 Thirteen tools, registered once via `document.modelContext.registerTool`
 (`src/webmcp/register.ts`, `src/webmcp/tools.ts`). All operate on the single
 live CodeMirror document inside `<strudel-editor>` — there is no separate
-agent-side copy of the source.
+agent-side copy of the source. Every tool call, reads included, leaves a
+quiet trail in the footer status strip (`get_code ✓`,
+`apply_edits ✕ STALE_CODE`) — purely cosmetic, never blocking.
 
 ## Agent modes
 
@@ -289,7 +291,9 @@ or `ProposalResult` in review mode / with `propose: true`:
 The proposal leaves the document untouched. The human auditions, accepts or
 discards it in the page; the agent may audition it itself with
 `strudel_evaluate({proposalId})`. Accepting is rejected with `STALE_CODE`
-if the document changed in the meantime.
+if the document changed in the meantime. A new proposal replaces any pending
+one; if the replaced proposal was being auditioned, the audio returns to the
+visible document.
 
 **Stale-state behaviour:** rejected with `STALE_CODE` if the live document's
 hash no longer matches `expectedCodeHash` — nothing is applied. All-or-nothing
@@ -380,7 +384,10 @@ proposal without changing the document.
 `scope` says what is sounding after the call: `document` (the whole visible
 source), `solo` (only `range`; the result then also carries the exact `solo`
 range, and the page shows a solo notice until the next full evaluate), or
-`audition` (the proposal's code, not the document).
+`audition` (the proposal's code, not the document). Any evaluation that lands
+the visible document — including the human pressing Ctrl+Enter on the native
+path, outside the tools entirely — returns to the whole pattern and clears
+the solo/audition notice, so the notice can never get stranded.
 
 **Stale-state behaviour:** rejected with `STALE_CODE` if the live document's
 hash no longer matches `expectedCodeHash` before evaluation runs. Auditioning
@@ -538,8 +545,9 @@ take to the page.
 ```
 
 `durationMs` (500–30,000, default 4,000) or `untilStopped: true` — keep
-recording until the human presses the Rec button again in the page (max 5 minutes; the call
-resolves when they do). `source` is `"master"` (default: everything the human
+recording until the human presses the Rec button again in the page, or stops
+playback (max 5 minutes; the call resolves when they do, and the captured
+clip is kept — either side can end anyone's take). `source` is `"master"` (default: everything the human
 hears) or the id of a voice tagged `.analyze("id")` in the code, to isolate
 that one part. `includeAudio: true` returns the clip itself as base64
 webm/opus (`audioBase64`) for clips up to 20 s. `label` (≤ 60 chars) is shown
@@ -658,7 +666,8 @@ prepended to relative sample paths.
 ```
 
 `failed` lists requested names that did not register (bad URL, CORS, decode
-failure).
+failure). The page's Samples shelf renders the first 200 names with a
+`+N more` counter; `strudel_list_sounds` always lists the full registry.
 
 **Stale-state behaviour:** none (no `expectedCodeHash`; loading a sample
 never touches the document — the human adds `s("stab")` themselves, or asks

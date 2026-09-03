@@ -1,9 +1,9 @@
 import type { Session, Snapshot, LoadedSample } from '../strudel/session';
 import type { StrudelAdapter } from '../strudel/types';
 import { strudelCcUrl } from '../strudel/share';
-
 /** Versions and Samples sections of the shelf, rendered from session state. */
 export function wireShelf(session: Session, adapter: StrudelAdapter): void {
+
   const shelf = document.getElementById('shelf');
   const takes = document.getElementById('shelf-takes');
   const versionsSection = document.getElementById('shelf-versions');
@@ -19,7 +19,9 @@ export function wireShelf(session: Session, adapter: StrudelAdapter): void {
     }
     if (samples && samplesSection) {
       samplesSection.hidden = st.samples.length === 0;
-      samples.replaceChildren(...st.samples.map(sampleChip));
+      const chips = st.samples.slice(0, MAX_SAMPLE_CHIPS).map(sampleChip);
+      if (st.samples.length > MAX_SAMPLE_CHIPS) chips.push(moreChip(st.samples.length - MAX_SAMPLE_CHIPS));
+      samples.replaceChildren(...chips);
     }
     if (shelf) shelf.hidden = Boolean(versionsSection?.hidden && samplesSection?.hidden && takes?.hidden);
   };
@@ -68,6 +70,17 @@ function sampleChip(s: LoadedSample): HTMLElement {
   el.className = 'sample-chip';
   el.title = `In this session — use s("${s.name}")`;
   el.textContent = s.name;
+  return el;
+}
+
+/** The shelf scrolls, but a huge sample map should not mint thousands of chips: cap the render. */
+const MAX_SAMPLE_CHIPS = 200;
+
+function moreChip(n: number): HTMLElement {
+  const el = document.createElement('code');
+  el.className = 'sample-chip more';
+  el.title = 'Full list: strudel_list_sounds';
+  el.textContent = `+${n} more`;
   return el;
 }
 

@@ -115,9 +115,17 @@ two `EvaluateOptions` variants evaluate code **derived from** visible
 source, through the REPL's inner `repl.evaluate(code)`: `range` solos a
 slice of the document (space-padded so all original offsets are preserved —
 Strudel's own highlighting still lands on the right characters), and
-`proposalId` auditions a pending proposal's derived document. Both are
-transient and disclosed (solo/audition notice, `agent.solo` /
-`agent.auditioning` in context); see docs/DECISIONS.md.
+ `proposalId` auditions a pending proposal's derived document. Both are
+ transient and disclosed (solo/audition notice, `agent.solo` /
+ `agent.auditioning` in context); see docs/DECISIONS.md. A new proposal
+ supersedes any pending one, and if the superseded proposal was being
+ auditioned the audio returns to the visible document — sound and state can
+ never disagree about what is pending. Separately, the page watches the
+ REPL's own update events: whenever an evaluation lands whose code is the
+ visible document — including the human pressing Ctrl+Enter on the native
+ path, outside the tools entirely — any solo/audition state is cleared, so
+ the notice can never get stranded by a human evaluation the adapter never
+ saw.
 
 **Play / Stop.** `strudel_play` calls the same native evaluate path
 (Strudel's play button is `toggle()`, which evaluates when stopped); it does
@@ -132,8 +140,9 @@ only listens. `strudel_record` records that tap (or the `AnalyserNode`
 behind a `.analyze("id")` voice) with `MediaRecorder`, decodes the clip, and
 analyzes the PCM (`src/strudel/analysis.ts`): peak/RMS dBFS, a 250 ms
 loudness curve, low/mid/high bands. Finished clips go to the page's Takes
-shelf for the human; the human's own Rec button records the same tap, and
-either side can stop the other's take.
+ shelf for the human; the human's own Rec button records the same tap, and
+ either side can stop the other's take — stopping the scheduler gracefully
+ ends any recording in progress and the captured clip is kept.
 
 ## Why evaluate is separate from edit
 

@@ -218,6 +218,70 @@ test.describe('agent modes (read / review / live)', () => {
   });
 });
 
+test.describe('shared-state reconciliation', () => {
+  test('reads leave a quiet notice trail in the status strip', async ({ page }) => {
+    await openWithShim(page);
+    const activity = page.locator('#webmcp-status .status-activity');
+    await callTool(page, 'strudel_get_code');
+    await expect(activity).toHaveText(/get_code ✓/);
+    await callTool(page, 'strudel_get_context');
+    await expect(activity).toHaveText(/get_context ✓/);
+    await callTool(page, 'strudel_list_sounds', { query: 'bd', limit: 5 });
+    await expect(activity).toHaveText(/list_sounds ✓/);
+    // Failures surface there too.
+    const bad = await callTool<ToolError>(page, 'strudel_apply_edits', {
+      expectedCodeHash: 'stale-hash',
+      edits: [{ range: { start: { line: 0, column: 0 }, end: { line: 0, column: 0 } }, text: '// x' }],
+    });
+    expect(bad.error).toBe('STALE_CODE');
+    await expect(activity).toHaveText(/apply_edits ✕ STALE_CODE/);
+  });
+
+  test('a human evaluation on the native path clears a solo notice', async ({ page }) => {
+    await openWithShim(page);
+    await pressPlay(page);
+
+    const doc = await editorDoc(page);
+    const ctx = await callTool<ContextResult>(page, 'strudel_get_context');
+    const bass = lineOf(doc, '// bass');
+    const bassLine = bass.line + 1;
+    const bassText = doc.split('\n')[bassLine]!;
+    const solo = await callTool<EvalResult>(page, 'strudel_evaluate', {
+      expectedCodeHash: ctx.editor.codeHash,
+      range: { start: { line: bassLine, column: 2 }, end: { line: bassLine, column: bassText.length } },
+    });
+    expect(solo.scope).toBe('solo');
+    await expect(page.locator('#playback-notice')).toHaveAttribute('data-kind', 'solo');
+
+    // Human presses Ctrl+Enter: the native mirror.evaluate() on the visible document,
+    // with no adapter involvement — the whole document is sounding again, so the notice goes.
+    await page.evaluate(() => {
+      const host = document.querySelector('strudel-editor') as unknown as { editor: { evaluate(): Promise<void> } };
+      return host.editor.evaluate();
+    });
+    await expect(page.locator('#playback-notice')).toBeHidden();
+    await expect.poll(async () => (await replState(page)).activeCode).toBe(doc);
+    const after = await callTool<ContextResult>(page, 'strudel_get_context');
+    expect(after.agent.solo).toBeUndefined();
+  });
+
+  test('stopping playback ends an agent take and keeps the clip', async ({ page }) => {
+    await openWithShim(page);
+    await pressPlay(page);
+
+    const recording = callTool<RecordResult>(page, 'strudel_record', { untilStopped: true, label: 'stopped take' });
+    await expect(page.locator('#btn-rec')).toHaveAttribute('data-recording', 'true');
+    await page.waitForTimeout(1200);
+    // Human presses Play again to stop (native toggle) — either side can end anyone's take.
+    await page.locator('#btn-play').click();
+    const rec = await recording;
+    expect(rec.recorded).toBe(true);
+    expect(rec.label).toBe('stopped take');
+    await expect(page.locator('#recordings .clip')).toHaveCount(1);
+    await expect(page.locator('#btn-rec')).toHaveAttribute('data-recording', 'false');
+  });
+});
+
 test.describe('strudel_record', () => {
   test('untilStopped waits for the human and returns analysis plus base64 audio', async ({ page }) => {
     await openWithShim(page);
