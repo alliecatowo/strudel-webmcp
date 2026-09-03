@@ -24,8 +24,8 @@ integration was verified against.
 ## Exactly which upstream objects this project touches
 
 Every access is confined to `src/strudel/` (see `src/strudel/host.ts` for the
-narrow typings and `docs/research/strudel-repl.md` for the verification memo).
-Nothing outside that directory imports `@strudel/repl` internals.
+narrow typings). Nothing outside that directory imports `@strudel/repl`
+internals.
 
 | Object | What it is | Used for |
 |---|---|---|
@@ -71,26 +71,22 @@ no sample browser or import surface (the full strudel.cc IDE has one; the
 embeddable component does not), no slots or panels. Every custom surface on
 this page (transport, record/takes, samples, versions, proposal bar,
 solo/audition notice, mode dial) therefore exists because there is no native
-equivalent — see `docs/DECISIONS.md` for the per-element verdicts. If a future
-`@strudel/repl` ships any of these natively, the corresponding custom surface
-should be deleted in favour of it.
+equivalent. If a future `@strudel/repl` ships any of these natively, the
+corresponding custom surface should be deleted in favour of it.
 
 ## How to bump the pinned version safely
 
-1. Re-run (or re-verify) the reconnaissance in
-   `docs/research/strudel-repl.md` against the new version's bundled output
-   (`node_modules/@strudel/repl/dist/*.js`), specifically the object paths in
-   the table above — line numbers and internal names may move even between
-   patch releases since they are unstable internals.
+1. Re-verify the object paths in the table above against the new version's
+   bundled output (`node_modules/@strudel/repl/dist/*.js`) — line numbers and
+   internal names may move even between patch releases since they are
+   unstable internals.
 2. Update `"@strudel/repl"` in `package.json` to the new exact version (still
    pinned, no ranges).
 3. Run `npm ci && npm run typecheck && npm test && npm run test:e2e`.
-4. Manually re-run the demo flow in `docs/demo-script.md`, in particular the
-   inline-slider stale-write test, since slider behavior is one of the
-   internal surfaces this project depends on.
-5. Record the new version and date in this file and, if any adapter code had
-   to change because an internal path moved, add an entry to
-   `docs/DECISIONS.md`.
+4. Manually re-run the demo flow, in particular the inline-slider stale-write
+   test, since slider behavior is one of the internal surfaces this project
+   depends on.
+5. Record the new version and date in this file.
 
 ## Sample-bank attribution
 
