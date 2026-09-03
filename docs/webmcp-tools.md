@@ -410,7 +410,7 @@ characters).
 > Solo and audition evaluate a string **derived from** the visible source (the
 > selected range, space-padded to keep its offsets, or the proposal's code —
 > which is itself the visible document plus the proposed edits). Nothing is
-> ever evaluated that the human cannot see; see docs/DECISIONS.md.
+> ever evaluated that the human cannot see.
 
 ---
 

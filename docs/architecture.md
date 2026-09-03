@@ -84,8 +84,8 @@ simply sees the new text and computes a new `codeHash` for it.
 **Human slider move.** Strudel's built-in `SliderWidget` renders an
 `<input type="range">` inline in the editor. On `input`, the widget itself
 dispatches a CodeMirror change that rewrites the numeric literal in the
-source (see `docs/research/strudel-repl.md` #11) — the same kind of
-transaction typing produces. From the adapter's point of view this is
+source — the same kind of transaction typing produces. From the adapter's
+point of view this is
 indistinguishable from a human typing a new number: the document changed, so
 `hashCode()` of the document changes. There is no separate slider bridge or
 slider-specific WebMCP tool; the source already carries the value.
@@ -117,7 +117,7 @@ slice of the document (space-padded so all original offsets are preserved —
 Strudel's own highlighting still lands on the right characters), and
  `proposalId` auditions a pending proposal's derived document. Both are
  transient and disclosed (solo/audition notice, `agent.solo` /
- `agent.auditioning` in context); see docs/DECISIONS.md. A new proposal
+ `agent.auditioning` in context). A new proposal
  supersedes any pending one, and if the superseded proposal was being
  auditioned the audio returns to the visible document — sound and state can
  never disagree about what is pending. Separately, the page watches the
@@ -195,8 +195,7 @@ playback.
 
 ## Deliberately not built
 
-Per `docs/BUILD_CONTRACT.md` §97, this project does not include: an MCP
-server, a WebSocket/SSE bridge, an embedded chat UI or LLM API, a
+This project does not include: an MCP server, a WebSocket/SSE bridge, an embedded chat UI or LLM API, a
 `strudel_set_slider` tool (the agent edits source directly; sliders already
 propagate through the shared document), a hidden/arbitrary-code evaluation
 tool, accounts, a database, or any reimplementation of Strudel's transpiler,

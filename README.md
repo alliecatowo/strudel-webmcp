@@ -2,6 +2,31 @@
 
 > Live-code together.
 
+<p align="center">
+  <img src="./docs/media/hero.gif" alt="A DMX kick auditions as a proposal in Review mode: the diff banner reads 'Your source is unchanged until you accept or discard it in the editor', then Accept lands the change live in the editor." width="800">
+</p>
+
+<p align="center">
+  <sub>Review mode: propose, audition, accept — with real captured Strudel audio under the narration in the full demo.</sub>
+</p>
+
+<table align="center">
+  <tr>
+    <td align="center" width="33%">
+      <img src="./docs/media/screenshot-slider.png" alt="Dragging the bass filter's inline slider while the numeric literal (600, 100, 4000) updates live in the source" width="320"><br>
+      <sub>Drag a slider, watch the literal update live</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="./docs/media/screenshot-takes.png" alt="A Takes shelf entry named 'Bass balance check' with a captured waveform after the agent recorded four seconds of audio" width="320"><br>
+      <sub>Agent records a take, capturing the waveform</sub>
+    </td>
+    <td align="center" width="33%">
+      <img src="./docs/media/screenshot-analysis.png" alt="Agent chat: 'Record four seconds and tell me: is the bass too loud?' answered with dBFS band-energy analysis and a concrete gain suggestion" width="320"><br>
+      <sub>Agent answers from real dBFS analysis, not a guess</sub>
+    </td>
+  </tr>
+</table>
+
 Strudel WebMCP progressively enhances the normal Strudel browser REPL with
 semantic tools for the browser agent already accompanying the user.
 
@@ -146,15 +171,8 @@ src/
   webmcp/             # tool definitions, schemas, registration, error/result helpers
   ui/                 # human-side chrome: status strip, mode dial, proposals, takes, shelf
 docs/
-  BUILD_CONTRACT.md   # authoritative implementation spec
-  DECISIONS.md         # recorded deviations from the contract, if any
-  UPSTREAM.md          # Strudel version, license, touched objects
   architecture.md
   webmcp-tools.md
-  demo-script.md
-  submission.md
-  CHALLENGE_DELTA.md
-  research/            # scout memos on pinned Strudel internals and WebMCP
 tests/
   unit/, e2e/, webmcp-shim.ts   # test-only WebMCP shim, never shipped
 ```
