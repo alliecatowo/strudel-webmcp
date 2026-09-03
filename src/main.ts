@@ -31,6 +31,7 @@ function mountRepl(): StrudelEditorElement {
 
 function wireTransport(host: StrudelEditorElement, session: Session, adapter: ReturnType<typeof createStrudelAdapter>): void {
   const play = document.getElementById('btn-play') as HTMLButtonElement | null;
+  const playLabel = play?.querySelector<HTMLElement>('.btn-label') ?? null;
   const update = document.getElementById('btn-update') as HTMLButtonElement | null;
   const solo = document.getElementById('btn-solo') as HTMLButtonElement | null;
   const rec = document.getElementById('btn-rec') as HTMLButtonElement | null;
@@ -64,7 +65,8 @@ function wireTransport(host: StrudelEditorElement, session: Session, adapter: Re
     const started = Boolean(detail?.started);
     if (play) {
       play.dataset.playing = String(started);
-      play.textContent = started ? '■ Stop' : '▶ Play';
+      if (playLabel) playLabel.textContent = started ? 'Stop' : 'Play';
+      play.setAttribute('aria-label', started ? 'Stop playback' : 'Start playback');
     }
     if (update) update.dataset.dirty = String(Boolean(detail?.isDirty) && !session.state.solo && !session.state.auditioning);
     if (rec && !session.state.recording) rec.disabled = !started;
@@ -81,26 +83,33 @@ function wireTransport(host: StrudelEditorElement, session: Session, adapter: Re
   });
 }
 
-/** Human-side recording: press to start, press again to stop (auto-stops at 5 min). Also stops agent recordings. */
-function wireHumanRecording(session: Session, tray: ReturnType<typeof createRecordingsTray>): void {
+/** Record control: press to start, press again to stop (auto-stops at 5 min). Also stops tool-triggered takes. */
+function wireRecordControl(session: Session, tray: ReturnType<typeof createRecordingsTray>): void {
   const rec = document.getElementById('btn-rec') as HTMLButtonElement | null;
   if (!rec) return;
+  const time = rec.querySelector<HTMLElement>('.rec-time');
   let ticker: number | undefined;
   session.addEventListener('change', () => {
     const r = session.state.recording;
     rec.dataset.recording = String(Boolean(r));
-    rec.dataset.by = r?.by ?? '';
     if (ticker) window.clearInterval(ticker);
     ticker = undefined;
     if (r) {
       rec.disabled = false;
+      if (time) time.hidden = false;
       const tick = () => {
-        rec.textContent = `■ ${((Date.now() - r.startedAt) / 1000).toFixed(1)} s`;
+        const s = ((Date.now() - r.startedAt) / 1000).toFixed(1);
+        if (time) time.textContent = `${s} s`;
+        rec.setAttribute('aria-label', `Stop recording (${s} s)`);
       };
       tick();
       ticker = window.setInterval(tick, 100);
     } else {
-      rec.textContent = '● Rec';
+      if (time) {
+        time.hidden = true;
+        time.textContent = '';
+      }
+      rec.setAttribute('aria-label', 'Record the live output');
     }
   });
   rec.addEventListener('click', async () => {
@@ -111,10 +120,10 @@ function wireHumanRecording(session: Session, tray: ReturnType<typeof createReco
     }
     const stopper = new AbortController();
     const label = `take ${new Date().toLocaleTimeString()}`;
-    session.setRecording({ by: 'human', label, startedAt: Date.now(), stop: () => stopper.abort() });
+    session.setRecording({ label, startedAt: Date.now(), stop: () => stopper.abort() });
     try {
       const clip = await recordMaster(tap, { maxMs: 300_000, until: stopper.signal });
-      tray.add({ id: `clip-${Date.now().toString(36)}`, label, blob: clip.blob, buffer: clip.buffer, durationMs: Math.round(clip.buffer.duration * 1000), by: 'human' });
+      tray.add({ id: `clip-${Date.now().toString(36)}`, label, blob: clip.blob, buffer: clip.buffer, durationMs: Math.round(clip.buffer.duration * 1000) });
     } catch (err) {
       console.warn('[strudel-webmcp] recording failed', err);
     } finally {
@@ -129,7 +138,7 @@ function wireSamplesAndVersions(session: Session, adapter: ReturnType<typeof cre
   const addFiles = async (files: File[]) => {
     try {
       const loaded = await loadSampleFiles(files);
-      session.addSamples(loaded.map((l) => ({ name: l.name, source: 'human' as const })));
+      session.addSamples(loaded.map((l) => ({ name: l.name })));
     } catch (err) {
       console.warn('[strudel-webmcp] sample import failed', err);
     }
@@ -183,7 +192,7 @@ async function main(): Promise<void> {
   });
 
   wireTransport(host, session, adapter);
-  wireHumanRecording(session, tray);
+  wireRecordControl(session, tray);
   wireAgentControls(session, adapter);
   wireShelf(session, adapter);
   wireSamplesAndVersions(session, adapter);

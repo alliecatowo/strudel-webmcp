@@ -3,7 +3,12 @@ import type { StrudelAdapter } from '../strudel/types';
 import { unifiedDiff } from '../strudel/diff';
 import { hashCode } from '../strudel/revisions';
 
-/** Mode control, proposal bar, solo/audition chips. All human-side; uses the adapter like the tools do. */
+/**
+ * Human-side controls that share state with the agent tools: the mode dial, the
+ * pending-change bar (review mode), and the "what is sounding" notice. All use
+ * the adapter exactly like the tools do; none of this is agent-branded — a
+ * proposal reads like a code-review suggestion, a take is a take.
+ */
 export function wireAgentControls(session: Session, adapter: StrudelAdapter): void {
   const modeControl = document.getElementById('mode-control');
   const bar = document.getElementById('proposal-bar');
@@ -11,9 +16,8 @@ export function wireAgentControls(session: Session, adapter: StrudelAdapter): vo
   const lines = document.getElementById('proposal-lines');
   const diffBox = document.getElementById('proposal-diff') as HTMLDetailsElement | null;
   const diffText = document.getElementById('proposal-diff-text');
-  const chipSolo = document.getElementById('chip-solo');
-  const chipSoloRange = document.getElementById('chip-solo-range');
-  const chipAudition = document.getElementById('chip-audition');
+  const notice = document.getElementById('playback-notice');
+  const noticeText = document.getElementById('notice-text');
 
   modeControl?.querySelectorAll<HTMLButtonElement>('[data-mode]').forEach((b) => {
     b.addEventListener('click', () => session.setMode(b.dataset.mode as AgentMode));
@@ -48,8 +52,10 @@ export function wireAgentControls(session: Session, adapter: StrudelAdapter): vo
   document.getElementById('btn-proposal-audition')?.addEventListener('click', act(() => adapter.auditionProposal()));
   document.getElementById('btn-proposal-accept')?.addEventListener('click', act(() => adapter.acceptProposal()));
   document.getElementById('btn-proposal-discard')?.addEventListener('click', act(() => adapter.discardProposal()));
-  chipSolo?.addEventListener('click', act(() => adapter.returnFromAudition()));
-  chipAudition?.addEventListener('click', act(() => adapter.returnFromAudition()));
+  document.getElementById('notice-return')?.addEventListener('click', act(() => adapter.returnFromAudition()));
+
+  const lineSpan = (startLine: number, endLine: number) =>
+    startLine === endLine ? `line ${startLine + 1}` : `lines ${startLine + 1}–${endLine + 1}`;
 
   const render = () => {
     const st = session.state;
@@ -62,23 +68,48 @@ export function wireAgentControls(session: Session, adapter: StrudelAdapter): vo
     if (diffBox) diffBox.hidden = !p;
     if (p) {
       if (summary) summary.textContent = p.summary;
-      if (lines) lines.textContent = p.lineRange.start === p.lineRange.end ? `line ${p.lineRange.start + 1}` : `lines ${p.lineRange.start + 1}–${p.lineRange.end + 1}`;
+      if (lines) lines.textContent = lineSpan(p.lineRange.start, p.lineRange.end);
       if (diffText) {
         const base = adapter.getCode();
-        diffText.textContent = hashCode(base) === p.baseCodeHash ? unifiedDiff(base, p.code, 8000) : '(document changed since this proposal was made)';
+        diffText.replaceChildren();
+        if (hashCode(base) === p.baseCodeHash) {
+          renderDiff(diffText, unifiedDiff(base, p.code, 8000));
+        } else {
+          const note = document.createElement('span');
+          note.className = 'stale-note';
+          note.textContent = 'The code changed after this change was proposed — discard and ask again.';
+          diffText.append(note);
+        }
       }
       const auditionBtn = document.getElementById('btn-proposal-audition') as HTMLButtonElement | null;
       if (auditionBtn) auditionBtn.textContent = st.auditioning ? 'Auditioning…' : 'Audition';
     }
-    if (chipAudition) chipAudition.hidden = !st.auditioning;
-    if (chipSolo) {
-      chipSolo.hidden = !st.solo;
-      if (st.solo && chipSoloRange) {
-        const { start, end } = st.solo.range;
-        chipSoloRange.textContent = start.line === end.line ? `line ${start.line + 1}` : `lines ${start.line + 1}–${end.line + 1}`;
+    // One quiet notice for "something other than the whole document is sounding".
+    if (notice) {
+      if (st.auditioning) {
+        notice.dataset.kind = 'audition';
+        notice.hidden = false;
+        if (noticeText) noticeText.textContent = `Auditioning the proposed change${p?.summary ? ` — ${p.summary}` : ''}`;
+      } else if (st.solo) {
+        notice.dataset.kind = 'solo';
+        notice.hidden = false;
+        if (noticeText) noticeText.textContent = `Soloing ${lineSpan(st.solo.range.start.line, st.solo.range.end.line)} — the rest is muted`;
+      } else {
+        notice.hidden = true;
       }
     }
   };
   session.addEventListener('change', render);
   render();
+}
+
+/** Render a unified diff as colored +/- lines, like a review comment in the editor. */
+function renderDiff(el: HTMLElement, diff: string): void {
+  for (const line of diff.split('\n')) {
+    if (!line) continue;
+    const span = document.createElement('span');
+    span.className = line.startsWith('+') ? 'ins' : line.startsWith('-') ? 'del' : line.startsWith('@') ? 'hunk' : 'context';
+    span.textContent = line.length > 200 ? `${line.slice(0, 200)}…` : line;
+    el.append(span);
+  }
 }

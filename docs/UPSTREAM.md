@@ -61,6 +61,20 @@ Also verified and used only read-only: Strudel's evalScope'd
 `@strudel/webaudio`, which would construct a second `AudioContext`) just to
 prefer Strudel's own context when the tap picks the active one.
 
+## Host-page UI surfaces investigated (none reusable)
+
+The pinned component (`node_modules/@strudel/repl/repl-component.mjs`, the
+whole element definition) exposes no surrounding UI to reuse: no transport
+buttons (only the Ctrl+Enter / Ctrl+. shortcuts), no settings/theme panel
+(themes go through `updateSettings`, which `strudel_set_theme` already uses),
+no sample browser or import surface (the full strudel.cc IDE has one; the
+embeddable component does not), no slots or panels. Every custom surface on
+this page (transport, record/takes, samples, versions, proposal bar,
+solo/audition notice, mode dial) therefore exists because there is no native
+equivalent — see `docs/DECISIONS.md` for the per-element verdicts. If a future
+`@strudel/repl` ships any of these natively, the corresponding custom surface
+should be deleted in favour of it.
+
 ## How to bump the pinned version safely
 
 1. Re-run (or re-verify) the reconnaissance in

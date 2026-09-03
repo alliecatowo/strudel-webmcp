@@ -58,16 +58,16 @@ Everything in this section is challenge work on top of upstream Strudel
   against the base `codeHash`.
 - Solo: `strudel_evaluate({range})` plays just the selected slice of the
   visible source (space-padded so Strudel's own highlighting still lands on
-  the right characters), with a Solo chip in the page until the next full
-  Update. The page's own "Run selection" button and Ctrl+Shift+Enter do the
-  same for the human.
+   the right characters), with a solo notice in the page until the next full
+   Update. The page's own "Run selection" button and Ctrl+Shift+Enter do the
+   same for the human.
 - Recording with analysis (`src/strudel/audio-tap.ts`,
   `src/strudel/analysis.ts`): a master-output tap installed by mirroring
   connections to `AudioDestinationNode` (no change to Strudel's graph or
   gain), `MediaRecorder` capture, and PCM analysis of the decoded clip —
   peak/RMS dBFS, a 250 ms loudness curve, low/mid/high band estimates,
   silence detection. `strudel_record` works per-voice (`.analyze("id")`
-  sources) and until-stopped (the human presses Stop); every take is left
+   sources) and until-stopped (the human presses the Rec button again); every take is left
   in the page's Takes shelf as a playable/downloadable clip with a waveform.
   The human's Rec button records the same way, and either side can stop the
   other's take.

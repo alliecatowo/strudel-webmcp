@@ -1,11 +1,10 @@
-/** Recordings tray: the human's view of every clip captured from the master output. */
+/** Takes tray: every clip captured from the live output, human- or tool-triggered. A take is a take. */
 export interface Clip {
   id: string;
   label: string;
   blob: Blob;
   buffer: AudioBuffer;
   durationMs: number;
-  by?: 'agent' | 'human';
 }
 
 const MAX_CLIPS = 8;
@@ -25,7 +24,6 @@ export function createRecordingsTray(root: HTMLElement | null) {
       const article = document.createElement('article');
       article.className = 'clip';
       article.dataset.clipId = clip.id;
-      article.dataset.by = clip.by ?? 'human';
 
       const head = document.createElement('div');
       head.className = 'clip-head';
@@ -39,7 +37,7 @@ export function createRecordingsTray(root: HTMLElement | null) {
       download.className = 'clip-download';
       download.href = url;
       download.download = `${safeName(clip.label)}.${ext}`;
-      download.textContent = 'download';
+      download.textContent = 'save';
       head.append(title, meta, download);
 
       const wave = document.createElement('canvas');
@@ -55,7 +53,6 @@ export function createRecordingsTray(root: HTMLElement | null) {
 
       article.append(head, wave, audio);
       root.prepend(article);
-      requestAnimationFrame(() => article.classList.add('clip-in'));
 
       const clips = root.querySelectorAll<HTMLElement>('.clip');
       for (let i = MAX_CLIPS; i < clips.length; i++) {
@@ -72,7 +69,7 @@ export function createRecordingsTray(root: HTMLElement | null) {
 }
 
 function safeName(label: string): string {
-  return label.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() || 'strudel-clip';
+  return label.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() || 'strudel-take';
 }
 
 function drawWaveform(canvas: HTMLCanvasElement, buffer: AudioBuffer): void {
@@ -82,7 +79,8 @@ function drawWaveform(canvas: HTMLCanvasElement, buffer: AudioBuffer): void {
   const data = buffer.getChannelData(0);
   const step = Math.max(1, Math.floor(data.length / width));
   ctx.clearRect(0, 0, width, height);
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#7dd3fc';
+  // The editor's own accent token, so takes follow the active Strudel theme.
+  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--caret').trim() || '#ffcc00';
   const mid = height / 2;
   for (let x = 0; x < width; x++) {
     let min = 1;

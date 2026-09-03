@@ -134,8 +134,8 @@ source has not changed.
 > "This is the safety property: in review, the agent proposes, I decide."
 
 3. Optionally `strudel_evaluate({proposalId})` — the agent auditions its own
-   proposal; the page shows an "Auditioning proposal" chip while the
-   proposal (not the document) is what is sounding.
+   proposal; the page shows a quiet "Auditioning the proposed change" notice
+   while the proposal (not the document) is what is sounding.
 
 Human clicks **Audition** (or relies on the agent's), listens, then
 **Accept** — the edit lands in the editor and the music updates in place —
@@ -157,7 +157,8 @@ While the groove plays, ask:
 
 Agent answers with numbers, not vibes ("bass is ~6 dB above the kick"), and
 the human can hit play on the take themselves. If there's time, show
-`untilStopped: true`: the recording runs until the human presses Stop, and
+`untilStopped: true`: the recording runs until the human presses the Rec
+button again, and
 either side can stop the other's take. Per-voice isolation
 (`source: "kick"` after adding `.analyze("kick")` to a pattern) is a good
 closer if the take-home message has already landed.

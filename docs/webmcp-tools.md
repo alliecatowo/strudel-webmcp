@@ -166,7 +166,7 @@ audible at this instant, from Strudel's own active-hap tracking. At most
 `mode` (`read`/`review`/`live`); `proposal` (`id`, `summary`, `baseCodeHash`,
 `lineRange`, `stale`) when an edit is awaiting the human; `auditioning` true
 while a proposal's code (not the document) is what is sounding; `solo` while
-a range is soloed; `recording` (`by`, `label`, `elapsedMs`) while a clip is
+a range is soloed; `recording` (`label`, `elapsedMs`) while a clip is
 being captured. `theme` is the current editor theme name, when known.
 
 **Stale-state behaviour:** none — always reflects the current document; this
@@ -379,7 +379,7 @@ proposal without changing the document.
 
 `scope` says what is sounding after the call: `document` (the whole visible
 source), `solo` (only `range`; the result then also carries the exact `solo`
-range, and the page shows a Solo chip until the next full evaluate), or
+range, and the page shows a solo notice until the next full evaluate), or
 `audition` (the proposal's code, not the document).
 
 **Stale-state behaviour:** rejected with `STALE_CODE` if the live document's
@@ -538,7 +538,7 @@ take to the page.
 ```
 
 `durationMs` (500–30,000, default 4,000) or `untilStopped: true` — keep
-recording until the human presses Stop in the page (max 5 minutes; the call
+recording until the human presses the Rec button again in the page (max 5 minutes; the call
 resolves when they do). `source` is `"master"` (default: everything the human
 hears) or the id of a voice tagged `.analyze("id")` in the code, to isolate
 that one part. `includeAudio: true` returns the clip itself as base64

@@ -31,7 +31,7 @@ test.describe('baseline: normal Strudel REPL without WebMCP', () => {
   test('Play starts the scheduler and toggles the button label', async ({ page }) => {
     await openPlain(page);
     await pressPlay(page);
-    await expect(page.locator('#btn-play')).toHaveText('■ Stop');
+    await expect(page.locator('#btn-play')).toHaveText('Stop');
     expect(await schedulerStarted(page)).toBe(true);
   });
 
@@ -48,7 +48,7 @@ test.describe('baseline: normal Strudel REPL without WebMCP', () => {
     await pressPlay(page);
     await page.locator('#btn-play').click();
     await expect.poll(() => schedulerStarted(page)).toBe(false);
-    await expect(page.locator('#btn-play')).toHaveText('▶ Play');
+    await expect(page.locator('#btn-play')).toHaveText('Play');
   });
 
   test('no uncaught page errors occur during normal use', async ({ page }) => {

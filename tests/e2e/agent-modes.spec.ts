@@ -146,7 +146,8 @@ test.describe('agent modes (read / review / live)', () => {
     });
     expect(audition.scope).toBe('audition');
     expect(audition.playing).toBe(true);
-    await expect(page.locator('#chip-audition')).toBeVisible();
+    await expect(page.locator('#playback-notice')).toBeVisible();
+    await expect(page.locator('#playback-notice')).toHaveAttribute('data-kind', 'audition');
     expect((await replState(page)).activeCode).toContain('hh*16');
     expect(await editorDoc(page)).toBe(doc);
 
@@ -154,7 +155,7 @@ test.describe('agent modes (read / review / live)', () => {
     await page.locator('#btn-proposal-accept').click();
     await expect.poll(() => editorDoc(page)).toContain('hh*16');
     await expect(page.locator('#proposal-bar')).toBeHidden();
-    await expect(page.locator('#chip-audition')).toBeHidden();
+    await expect(page.locator('#playback-notice')).toBeHidden();
     await expect.poll(async () => (await replState(page)).activeCode).toContain('hh*16');
 
     const after = await callTool<ContextResult>(page, 'strudel_get_context');
@@ -184,7 +185,8 @@ test.describe('agent modes (read / review / live)', () => {
     const active = (await replState(page)).activeCode;
     expect(active).toContain('sawtooth');
     expect(active).not.toContain('bd*4');
-    await expect(page.locator('#chip-solo')).toBeVisible();
+    await expect(page.locator('#playback-notice')).toBeVisible();
+    await expect(page.locator('#playback-notice')).toHaveAttribute('data-kind', 'solo');
 
     const soloCtx = await callTool<ContextResult>(page, 'strudel_get_context');
     expect(soloCtx.agent.solo).toMatchObject({ fromOffset: doc.indexOf(bassText.trim()) });
@@ -192,9 +194,9 @@ test.describe('agent modes (read / review / live)', () => {
       .poll(async () => (await callTool<ContextResult>(page, 'strudel_get_context')).sounding?.length ?? 0)
       .toBeGreaterThan(0);
 
-    // A human Update returns to the whole document and clears the solo chip.
+    // A human Update returns to the whole document and clears the solo notice.
     await page.locator('#btn-update').click();
-    await expect(page.locator('#chip-solo')).toBeHidden();
+    await expect(page.locator('#playback-notice')).toBeHidden();
     await expect.poll(async () => (await replState(page)).activeCode).toBe(doc);
   });
 
@@ -245,9 +247,9 @@ test.describe('strudel_record', () => {
     expect(typeof rec.audioBase64).toBe('string');
     expect(rec.audioBase64!.length).toBeGreaterThan(0);
 
-    // The take is left in the page for the human.
+    // The take is left in the page for the human — takes are takes, no agent framing.
     await expect(page.locator('#recordings .clip')).toHaveCount(1);
-    await expect(page.locator('#recordings .clip').first()).toHaveAttribute('data-by', 'agent');
+    await expect(page.locator('#recordings .clip .clip-label')).toHaveText('until stop');
     await expect(page.locator('#btn-rec')).toHaveAttribute('data-recording', 'false');
   });
 

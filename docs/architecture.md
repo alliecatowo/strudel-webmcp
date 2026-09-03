@@ -116,7 +116,7 @@ source, through the REPL's inner `repl.evaluate(code)`: `range` solos a
 slice of the document (space-padded so all original offsets are preserved —
 Strudel's own highlighting still lands on the right characters), and
 `proposalId` auditions a pending proposal's derived document. Both are
-transient and disclosed (Solo/Auditioning chips, `agent.solo` /
+transient and disclosed (solo/audition notice, `agent.solo` /
 `agent.auditioning` in context); see docs/DECISIONS.md.
 
 **Play / Stop.** `strudel_play` calls the same native evaluate path

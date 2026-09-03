@@ -39,7 +39,7 @@ export interface AdapterOptions {
   /** Master-output tap used by record(); when absent, record() reports RECORDING_UNSUPPORTED. */
   tap?: MasterTap;
   /** Receives every finished clip so the page can show it to the human. */
-  onRecording?: (clip: { id: string; label: string; blob: Blob; buffer: AudioBuffer; durationMs: number; by: 'agent' | 'human' }) => void;
+  onRecording?: (clip: { id: string; label: string; blob: Blob; buffer: AudioBuffer; durationMs: number }) => void;
   session?: Session;
   /** Known editor theme names (from the pinned REPL). */
   themes?: string[];
@@ -122,7 +122,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
     };
     const proposal: Proposal = {
       id: newId('proposal'),
-      summary: (summary ?? '').trim().slice(0, 140) || (kind === 'replace' ? 'Replace the whole composition' : 'Agent edit'),
+      summary: (summary ?? '').trim().slice(0, 140) || (kind === 'replace' ? 'Replace the whole composition' : 'Proposed edit'),
       kind,
       baseCodeHash: hashCode(base),
       changes,
@@ -217,7 +217,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
         };
       }
       if (st.solo) agent.solo = st.solo.range;
-      if (st.recording) agent.recording = { by: st.recording.by, label: st.recording.label, elapsedMs: Date.now() - st.recording.startedAt };
+      if (st.recording) agent.recording = { label: st.recording.label, elapsedMs: Date.now() - st.recording.startedAt };
       const ctx: StrudelContext = {
         playback,
         ...(sounding ? { sounding } : {}),
@@ -344,7 +344,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
       const tap = options.tap;
       if (!tap) throw new StrudelError('RECORDING_UNSUPPORTED', 'Recording is not available on this page.');
       if (session.state.recording) {
-        throw new StrudelError('PLAYBACK_ERROR', `A recording is already in progress (${session.state.recording.by}). Wait for it to finish.`);
+        throw new StrudelError('PLAYBACK_ERROR', 'A recording is already in progress. Wait for it to finish or stop it in the page.');
       }
       const untilStopped = Boolean(opts.untilStopped);
       const ms = untilStopped ? LIMITS.maxUntilStoppedMs : clampDuration(opts.durationMs);
@@ -356,7 +356,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
       if (!isPlaying(m)) throw new StrudelError('NOT_PLAYING', 'Nothing is playing. Start playback first, then record.');
       const sourceNode = source === 'master' ? undefined : resolveAnalyser(source);
       const stopper = new AbortController();
-      session.setRecording({ by: 'agent', label, startedAt: Date.now(), stop: () => stopper.abort() });
+      session.setRecording({ label, startedAt: Date.now(), stop: () => stopper.abort() });
       let rec;
       try {
         rec = await recordMaster(tap, { maxMs: ms, until: stopper.signal, signal, sourceNode });
@@ -365,7 +365,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
       }
       const analysis = analyzeAudioBuffer(rec.buffer);
       const id = newId('clip');
-      options.onRecording?.({ id, label, blob: rec.blob, buffer: rec.buffer, durationMs: analysis.durationMs, by: 'agent' });
+      options.onRecording?.({ id, label, blob: rec.blob, buffer: rec.buffer, durationMs: analysis.durationMs });
       const result: RecordResult = {
         recorded: true,
         clipId: id,
@@ -387,7 +387,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
       assertAgentMay('configure');
       const requested = typeof sources === 'object' && sources && !Array.isArray(sources) ? Object.keys(sources as object) : [];
       const loaded = await registryLoad(sources, baseUrl);
-      session.addSamples(loaded.map((name) => ({ name, source: 'agent' as const })));
+      session.addSamples(loaded.map((name) => ({ name })));
       return { loaded, failed: requested.filter((n) => !loaded.includes(n)) };
     },
 

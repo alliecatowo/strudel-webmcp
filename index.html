@@ -11,83 +11,87 @@
   <body>
     <header id="app-header">
       <div class="brand">
-        <span class="wordmark"><strong>Strudel</strong><span class="brand-sep">WebMCP</span></span>
-        <span class="subtitle">A live Strudel REPL with WebMCP</span>
+        <span class="wordmark">Strudel</span>
+        <span class="brand-tag">WebMCP</span>
       </div>
-      <div class="controls">
-        <button id="btn-play" type="button" class="btn btn-primary btn-fixed" data-playing="false" title="Play / Stop (Ctrl+Enter / Ctrl+.)">
-          <span class="btn-icon icon-play"></span><span class="btn-icon icon-stop"></span><span class="btn-label">Play</span>
+      <div class="transport" role="group" aria-label="Playback">
+        <button id="btn-play" type="button" class="btn btn-play" data-playing="false" title="Play / Stop (Ctrl+Enter / Ctrl+.)">
+          <svg class="icon ic-play" viewBox="0 0 16 16" aria-hidden="true"><path d="M4.5 2.8 12.8 8 4.5 13.2Z" fill="currentColor"/></svg>
+          <svg class="icon ic-stop" viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="3.5" width="9" height="9" rx="1.5" fill="currentColor"/></svg>
+          <span class="btn-label">Play</span>
         </button>
         <button id="btn-update" type="button" class="btn" data-dirty="false" title="Update: evaluate the visible code (Ctrl+Enter)">
-          <span class="btn-icon icon-update"></span><span class="btn-label">Update</span>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8a5 5 0 0 1 8.5-3.6M13 8a5 5 0 0 1-8.5 3.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M11.8 2.4v2.6H9.2M4.2 13.6V11h2.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+          <span class="btn-label">Update</span>
+          <span class="dirty-dot" aria-hidden="true"></span>
         </button>
-        <button id="btn-solo" type="button" class="btn" title="Run only the selected code (Ctrl+Shift+Enter)" disabled>
-          <span class="btn-icon icon-run"></span><span class="btn-label">Run selection</span>
+        <button id="btn-solo" type="button" class="btn btn-icon" title="Run only the selected code (Ctrl+Shift+Enter)" aria-label="Run only the selected code" disabled>
+          <svg class="icon" viewBox="0 0 16 16" aria-hidden="true"><path d="M2.5 3v10M13.5 3v10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/><path d="M5.5 5.4 11 8 5.5 10.6Z" fill="currentColor"/></svg>
         </button>
-        <button id="btn-rec" type="button" class="btn" data-recording="false" data-by="" title="Record the live output" disabled>
-          <span class="btn-icon icon-rec"></span><span class="btn-label">Rec</span>
+        <button id="btn-rec" type="button" class="btn btn-icon" data-recording="false" title="Record the live output" aria-label="Record the live output" disabled>
+          <svg class="icon ic-rec" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="4" fill="currentColor"/></svg>
+          <span class="rec-time" hidden></span>
         </button>
-        <div id="mode-control" class="segmented" role="radiogroup" aria-label="Agent mode" data-mode="read">
-          <button type="button" role="radio" data-mode="read" aria-checked="false" title="Agent may read, record and point, but not change anything">Read</button>
-          <button type="button" role="radio" data-mode="review" aria-checked="false" title="Agent edits become proposals you audition, accept or discard">Review</button>
-          <button type="button" role="radio" data-mode="live" aria-checked="false" title="Agent edits apply directly to the editor">Live</button>
+      </div>
+      <div class="agent-dial">
+        <span class="dial-label" id="mode-label">Agent</span>
+        <div id="mode-control" role="radiogroup" aria-labelledby="mode-label" data-mode="live">
+          <button type="button" role="radio" aria-checked="false" data-mode="read" title="Look, record and point — but change nothing">Read</button>
+          <button type="button" role="radio" aria-checked="false" data-mode="review" title="Changes become proposals you audition, accept or discard">Review</button>
+          <button type="button" role="radio" aria-checked="false" data-mode="live" title="Changes apply directly to the editor">Live</button>
         </div>
-        <span id="webmcp-status" class="status" data-state="pending">
-          <span class="status-label">WebMCP …</span>
-          <span class="status-activity" aria-live="polite"></span>
-        </span>
       </div>
     </header>
-    <div id="proposal-bar" class="proposal-bar" hidden>
-      <div class="proposal-main">
-        <span class="proposal-title">Agent proposes</span>
+
+    <div id="proposal-bar" class="proposal-bar" hidden role="region" aria-label="Proposed change">
+      <div class="proposal-head">
+        <span class="proposal-kicker">Proposed change</span>
         <span id="proposal-summary" class="proposal-summary"></span>
         <span id="proposal-lines" class="proposal-lines"></span>
+        <span class="proposal-actions">
+          <button id="btn-proposal-show" type="button" class="btn" title="Select the changed range in the editor">Show</button>
+          <button id="btn-proposal-audition" type="button" class="btn" title="Hear the proposal without changing the code">Audition</button>
+          <button id="btn-proposal-accept" type="button" class="btn btn-primary" title="Apply the change to the code">Accept</button>
+          <button id="btn-proposal-discard" type="button" class="btn" title="Discard the change">Discard</button>
+        </span>
       </div>
-      <span class="proposal-actions">
-        <button id="btn-proposal-show" type="button" class="btn btn-ghost" title="Select the proposed range">
-          <span class="btn-icon icon-eye"></span><span class="btn-label">Show</span>
-        </button>
-        <button id="btn-proposal-audition" type="button" class="btn btn-ghost" title="Preview the proposal without changing the document">
-          <span class="btn-icon icon-run"></span><span class="btn-label">Audition</span>
-        </button>
-        <button id="btn-proposal-accept" type="button" class="btn btn-primary" title="Apply the proposal to the document">
-          <span class="btn-icon icon-check"></span><span class="btn-label">Accept</span>
-        </button>
-        <button id="btn-proposal-discard" type="button" class="btn btn-ghost" title="Discard the proposal">
-          <span class="btn-icon icon-x"></span><span class="btn-label">Discard</span>
-        </button>
-      </span>
+      <details id="proposal-diff" class="proposal-diff" open>
+        <summary>Diff</summary>
+        <pre id="proposal-diff-text" class="diff"></pre>
+      </details>
     </div>
-    <div id="chips" class="chips">
-      <button id="chip-solo" type="button" class="chip" hidden title="Return to the whole document">
-        <span class="chip-label">Solo <span id="chip-solo-range"></span></span><span class="chip-close icon-x"></span>
-      </button>
-      <button id="chip-audition" type="button" class="chip" hidden title="Return to the document">
-        <span class="chip-dot" aria-hidden="true"></span><span class="chip-label">Auditioning proposal</span><span class="chip-close icon-x"></span>
-      </button>
+
+    <div id="playback-notice" class="playback-notice" data-kind="" hidden>
+      <span class="notice-dot" aria-hidden="true"></span>
+      <span id="notice-text"></span>
+      <button id="notice-return" type="button" class="link">Return to the whole pattern</button>
     </div>
+
     <main id="app-main">
       <div id="repl-mount"></div>
       <div id="eval-error" class="eval-error" hidden></div>
-      <details id="proposal-diff" class="proposal-diff" hidden>
-        <summary><span class="icon-chevron"></span>Proposed changes</summary>
-        <pre id="proposal-diff-text"></pre>
-      </details>
     </main>
-    <section id="shelf" class="shelf" hidden>
+
+    <section id="shelf" class="shelf" aria-label="Takes, versions and samples" hidden>
       <div id="shelf-takes" class="shelf-section" hidden><h2 class="shelf-label">Takes</h2><div class="shelf-items" id="recordings"></div></div>
       <div id="shelf-versions" class="shelf-section" hidden><h2 class="shelf-label">Versions</h2><div class="shelf-items" id="versions"></div></div>
       <div id="shelf-samples" class="shelf-section" hidden><h2 class="shelf-label">Samples</h2><div class="shelf-items" id="samples"></div></div>
     </section>
+
     <footer id="app-footer">
-      <span>Built on <a href="https://strudel.cc" rel="noopener">Strudel</a> (AGPL-3.0) · <a href="https://github.com/alliecatowo/strudel-webmcp" rel="noopener">source</a></span>
+      <span class="footer-note">Built on <a href="https://strudel.cc" rel="noopener">Strudel</a> · <a href="https://github.com/alliecatowo/strudel-webmcp" rel="noopener">source</a></span>
       <span class="footer-actions">
         <button id="btn-save-version" type="button" class="link">Save version</button>
         <button id="btn-export" type="button" class="link">Export .strudel</button>
-        <label class="link">Import audio<input id="input-samples" type="file" accept="audio/*" multiple hidden /></label>
+        <label class="link import-label">Import audio<input id="input-samples" type="file" accept="audio/*" multiple hidden /></label>
+      </span>
+      <span id="webmcp-status" class="status" data-state="pending">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span class="status-label">WebMCP …</span>
+        <span class="status-activity" aria-live="polite"></span>
       </span>
     </footer>
+
     <div id="dropzone" class="dropzone" hidden><span>Drop audio files to add them as samples</span></div>
     <script type="module" src="./src/main.ts"></script>
   </body>

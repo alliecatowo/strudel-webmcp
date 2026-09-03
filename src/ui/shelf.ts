@@ -24,7 +24,7 @@ export function wireShelf(session: Session, adapter: StrudelAdapter): void {
     if (shelf) shelf.hidden = Boolean(versionsSection?.hidden && samplesSection?.hidden && takes?.hidden);
   };
   session.addEventListener('change', render);
-  // Takes are appended by the recordings tray; watch for it un-hiding.
+  // Takes are appended by the takes tray; watch for it un-hiding.
   if (takes) new MutationObserver(render).observe(takes, { attributes: true, attributeFilter: ['hidden'] });
   render();
 }
@@ -52,7 +52,8 @@ function versionCard(s: Snapshot, adapter: StrudelAdapter, session: Session): HT
   download.download = `${s.label.replace(/[^a-z0-9-_ ]/gi, '').trim().replace(/\s+/g, '-').toLowerCase() || 'strudel'}.strudel`;
   const open = document.createElement('a');
   open.className = 'link';
-  open.textContent = 'Open in strudel.cc';
+  open.textContent = 'strudel.cc';
+  open.title = 'Open this version at strudel.cc';
   open.href = strudelCcUrl(s.code);
   open.target = '_blank';
   open.rel = 'noopener';
@@ -65,7 +66,7 @@ function versionCard(s: Snapshot, adapter: StrudelAdapter, session: Session): HT
 function sampleChip(s: LoadedSample): HTMLElement {
   const el = document.createElement('code');
   el.className = 'sample-chip';
-  el.title = `${s.source === 'human' ? 'Added by you' : 'Added by the agent'} · use s("${s.name}")`;
+  el.title = `In this session — use s("${s.name}")`;
   el.textContent = s.name;
   return el;
 }

@@ -26,7 +26,7 @@ test.describe('strudel_play / strudel_stop (sections 32-33, 80)', () => {
     const result = await callTool<PlaybackResult>(page, 'strudel_play', { expectedCodeHash: hash });
     expect(result.playing).toBe(true);
     await expect.poll(() => schedulerStarted(page)).toBe(true);
-    await expect(page.locator('#btn-play')).toHaveText('■ Stop');
+    await expect(page.locator('#btn-play')).toHaveText('Stop');
   });
 
   test('strudel_play while already playing returns playing:true without re-evaluating', async ({ page }) => {
@@ -53,7 +53,7 @@ test.describe('strudel_play / strudel_stop (sections 32-33, 80)', () => {
     const result = await callTool<PlaybackResult>(page, 'strudel_stop');
     expect(result.playing).toBe(false);
     await expect.poll(() => schedulerStarted(page)).toBe(false);
-    await expect(page.locator('#btn-play')).toHaveText('▶ Play');
+    await expect(page.locator('#btn-play')).toHaveText('Play');
   });
 
   test('strudel_get_context reflects playing:false after stop', async ({ page }) => {

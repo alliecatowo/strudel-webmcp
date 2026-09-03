@@ -59,7 +59,7 @@ export interface StrudelContext {
     /** Present while a range is soloed. */
     solo?: SourceRange & OffsetRange;
     /** Present while a recording is in progress. */
-    recording?: { by: 'agent' | 'human'; label: string; elapsedMs: number };
+    recording?: { label: string; elapsedMs: number };
   };
   theme?: string;
 }

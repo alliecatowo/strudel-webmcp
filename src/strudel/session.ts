@@ -27,7 +27,6 @@ export interface SoloState {
 }
 
 export interface RecordingState {
-  by: 'agent' | 'human';
   label: string;
   startedAt: number;
   /** Graceful stop: keeps the clip. */
@@ -44,7 +43,6 @@ export interface Snapshot {
 
 export interface LoadedSample {
   name: string;
-  source: 'human' | 'agent';
   durationMs?: number;
 }
 
