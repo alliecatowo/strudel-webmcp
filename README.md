@@ -35,6 +35,18 @@ The agent can read and edit that exact same CodeMirror document, evaluate
 changes in the same live Strudel scheduler, and record what it all sounds
 like — under a permission dial the human owns.
 
+Live coding is a specialized audience, but the engine underneath it is not
+niche: `@strudel/core`, the pattern engine every Strudel-based tool depends
+on, drew about 30,000 npm downloads in the 30 days ending August 29, 2026;
+the wider `@strudel/*` family this project embeds — mini-notation,
+transpiler, WebAudio backend, CodeMirror integration, and the REPL itself —
+adds roughly 76,000 more over the same window ([npm registry download
+stats](https://api.npmjs.org/downloads/point/last-month/@strudel/core), one
+package at a time). The instrument in the screenshots above is one REPL; the
+seam this project adds — read the live document, edit it behind a codeHash
+guard, evaluate on the running scheduler, listen back — is generic to any of
+those downstream tools, not specific to this demo's drum pattern.
+
 No AI SDK.
 No MCP server.
 No WebSocket bridge.
@@ -154,9 +166,10 @@ breakdown.
 
 ## Tests
 
-- `npm test` — unit tests (Vitest): hashing, position/offset conversion, edit
-  validation, stale-hash rejection, source-size bounds, error normalization.
-- `npm run test:e2e` — Playwright end-to-end tests against the real
+- `npm test` — **75 unit tests** (Vitest): hashing, position/offset
+  conversion, edit validation, stale-hash rejection, source-size bounds,
+  error normalization.
+- `npm run test:e2e` — **53 end-to-end tests** (Playwright) against the real
   `<strudel-editor>`, including the inline-slider stale-write test and the
   agent-modes suite (read denials, the proposal lifecycle, solo, both
   recording modes, samples, snapshots, themes).

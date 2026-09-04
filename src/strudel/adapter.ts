@@ -360,6 +360,13 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
         throw new StrudelError('SOURCE_TOO_LARGE', `includeAudio is limited to clips of ${LIMITS.maxInlineAudioMs / 1000} s or less.`, { limitMs: LIMITS.maxInlineAudioMs });
       }
       if (!isPlaying(m)) throw new StrudelError('NOT_PLAYING', 'Nothing is playing. Start playback first, then record.');
+      // Capture the source that is visible right now — a recording can run for up to
+      // maxUntilStoppedMs (untilStopped) and the agent or human is free to edit and
+      // re-evaluate while it runs. Hashing after recordMaster resolves would report
+      // whatever text happens to be on screen when the take finishes, not what was
+      // actually sounding while it was captured (docs/webmcp-tools.md's documented
+      // contract for this field).
+      const codeHash = hashCode(read());
       const sourceNode = source === 'master' ? undefined : resolveAnalyser(source);
       const stopper = new AbortController();
       session.setRecording({ label, startedAt: Date.now(), stop: () => stopper.abort() });
@@ -380,7 +387,7 @@ export function createStrudelAdapter(host: StrudelEditorElement, options: Adapte
         bytes: rec.blob.size,
         ...analysis,
         bandsDb: rec.bandsDb,
-        codeHash: hashCode(read()),
+        codeHash,
         source,
       };
       if (opts.includeAudio && analysis.durationMs <= LIMITS.maxInlineAudioMs) {

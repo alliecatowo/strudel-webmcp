@@ -343,6 +343,38 @@ test.describe('strudel_record', () => {
     expect(bad.error).toBe('INVALID_INPUT');
     expect(bad.available).toContain('kick');
   });
+
+  test('codeHash reflects the code visible when recording started, not a later edit made mid-take', async ({ page }) => {
+    await openWithShim(page);
+    await pressPlay(page);
+
+    const before = await callTool<{ code: string; codeHash: string }>(page, 'strudel_get_code');
+    const recording = callTool<RecordResult>(page, 'strudel_record', { untilStopped: true, label: 'mid-take edit' });
+    await expect(page.locator('#btn-rec')).toHaveAttribute('data-recording', 'true');
+    await page.waitForTimeout(600);
+
+    // Edit and re-evaluate *while the take is still running* — this is the "concurrent
+    // record + edit" case: the recorder is still capturing audio produced by `before.code`.
+    const hats = lineOf(before.code, 'hh*8');
+    const col = hats.text.indexOf('hh*8');
+    const edited = await callTool<EditResult>(page, 'strudel_apply_edits', {
+      expectedCodeHash: before.codeHash,
+      edits: [{ range: { start: { line: hats.line, column: col }, end: { line: hats.line, column: col + 4 } }, text: 'hh*16' }],
+      evaluate: true,
+    });
+    expect(edited.updated).toBe(true);
+    expect(edited.codeHash).not.toBe(before.codeHash);
+
+    await page.waitForTimeout(600);
+    await page.locator('#btn-rec').click();
+    const rec = await recording;
+
+    expect(rec.recorded).toBe(true);
+    // The clip captured `before.code`'s audio, so its codeHash must be the hash from
+    // when the take started — not the hash of whatever the document became afterwards.
+    expect(rec.codeHash).toBe(before.codeHash);
+    expect(rec.codeHash).not.toBe(edited.codeHash);
+  });
 });
 
 test.describe('sounds, versions and themes', () => {
