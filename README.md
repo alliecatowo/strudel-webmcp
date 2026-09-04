@@ -166,10 +166,10 @@ breakdown.
 
 ## Tests
 
-- `npm test` — **75 unit tests** (Vitest): hashing, position/offset
-  conversion, edit validation, stale-hash rejection, source-size bounds,
-  error normalization.
-- `npm run test:e2e` — **53 end-to-end tests** (Playwright) against the real
+- `npm test` — unit tests (Vitest) for hashing, position/offset conversion,
+  edit validation, stale-hash rejection, source-size bounds, error
+  normalization.
+- `npm run test:e2e` — end-to-end tests (Playwright) against the real
   `<strudel-editor>`, including the inline-slider stale-write test and the
   agent-modes suite (read denials, the proposal lifecycle, solo, both
   recording modes, samples, snapshots, themes).
