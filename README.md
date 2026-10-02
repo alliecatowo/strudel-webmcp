@@ -110,8 +110,8 @@ Full input/output/error details: [docs/webmcp-tools.md](./docs/webmcp-tools.md).
 
 Live site: **https://strudel-webmcp.vercel.app**
 
-This requires a WebMCP-capable browser or agent (for example Chrome 149+ or
-Edge 150+ with the WebMCP origin trial, or ChatGPT Desktop) to exercise the
+This requires a WebMCP-capable browser or agent (for example Chrome with the
+WebMCP experimental flag enabled, or ChatGPT Desktop) to exercise the
 agent tools. Without one, the page is still a completely normal, fully
 functional Strudel REPL — WebMCP is a progressive enhancement, not a
 requirement.
